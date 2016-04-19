@@ -206,7 +206,7 @@ func resourceVirtualMachineCreate(d *schema.ResourceData, meta interface{}) erro
 	}
     var confSpec types.VirtualMachineConfigSpec
     if d.Get("cpus") != nil {
-        confSpec.NumCPUs = d.Get("cpus").(int)
+        confSpec.NumCPUs = int32(d.Get("cpus").(int))
     }
     if d.Get("memory") != nil {
         confSpec.MemoryMB = int64(d.Get("memory").(int))

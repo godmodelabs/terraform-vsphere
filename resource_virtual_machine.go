@@ -52,6 +52,12 @@ func resourceVirtualMachine() *schema.Resource {
 				Optional: true,
                 Computed: true,
             },
+			"host_group": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+                Default: "default",
+                ForceNew: true,
+            },
 
 			"linked_clone": &schema.Schema{
 				Type:     schema.TypeBool,
@@ -224,8 +230,13 @@ func resourceVirtualMachineCreate(d *schema.ResourceData, meta interface{}) erro
             }
             ov = append(ov, &o)
         }
-        confSpec.ExtraConfig = ov
     }
+	host_group := types.OptionValue{
+		Key:   "host_group",
+		Value: d.Get("host_group"),
+	}
+	ov = append(ov, &host_group)
+	confSpec.ExtraConfig = ov
 
 	cloneSpec := types.VirtualMachineCloneSpec{
 		Location: relocateSpec,
@@ -316,7 +327,7 @@ func resourceVirtualMachineRead(d *schema.ResourceData, meta interface{}) error 
     vm := object.NewVirtualMachine(client, vm_mor)
 
     var vm_mo mo.VirtualMachine
-    err := vm.Properties(context.TODO(), vm.Reference(), []string{"summary"}, &vm_mo)
+    err := vm.Properties(context.TODO(), vm.Reference(), []string{"summary", "config.extraConfig"}, &vm_mo)
     if err != nil {
         log.Printf("[INFO] Cannot read VM properties: %s", err)
         d.SetId("")
@@ -338,6 +349,13 @@ func resourceVirtualMachineRead(d *schema.ResourceData, meta interface{}) error 
             log.Printf("[ERROR] Cannot read ip address: %s", err)
         } else {
             d.Set("ip_address", ip)
+        }
+    }
+
+    for _, v := range vm_mo.Config.ExtraConfig {
+        if v.GetOptionValue().Key == "host_group" {
+            d.Set("host_group", v.GetOptionValue().Value.(string))
+            break
         }
     }
 
